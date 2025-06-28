@@ -1,26 +1,23 @@
-// This MUST be the first line to ensure environment variables are loaded
 require('dotenv').config();
 
 const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
-const path = require('path'); // We need the 'path' module
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// --- Middleware ---
+// Middleware
 app.use(cors());
 app.use(express.json());
 
-// --- Static Files ---
 // Serve static files from the 'public' directory
 app.use(express.static(path.join(__dirname, 'public')));
 
-// --- API Router (THE NEW, MORE RELIABLE WAY) ---
-const apiRouter = express.Router(); // Create a new router instance
+// API Router
+const apiRouter = express.Router();
 
-// Define the /chat route on the new router
 apiRouter.post('/chat', async (req, res) => {
     try {
         const { userMessage, systemInstruction } = req.body;
@@ -56,13 +53,7 @@ apiRouter.post('/chat', async (req, res) => {
 // Tell the main app to use our new router for all routes starting with /api
 app.use('/api', apiRouter);
 
-// --- Catch-all route for the frontend ---
-// This is important for single-page applications. It sends index.html for any
-// GET request that doesn't match an API route or a static file.
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
+// The app.get('*', ...) route has been REMOVED to prevent the crash.
 
 // Start the Server
 app.listen(PORT, () => {
