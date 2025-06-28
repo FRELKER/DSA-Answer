@@ -4,31 +4,30 @@ require('dotenv').config();
 const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
+const path = require('path'); // We need the 'path' module
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
+// --- Middleware ---
 app.use(cors());
 app.use(express.json());
-app.use(express.static('public'));
 
-// API Route
-app.post('/api/chat', async (req, res) => {
-    console.log("Received a request for /api/chat"); // <-- DEBUGGING LINE 1
+// --- Static Files ---
+// Serve static files from the 'public' directory
+app.use(express.static(path.join(__dirname, 'public')));
 
+// --- API Router (THE NEW, MORE RELIABLE WAY) ---
+const apiRouter = express.Router(); // Create a new router instance
+
+// Define the /chat route on the new router
+apiRouter.post('/chat', async (req, res) => {
     try {
         const { userMessage, systemInstruction } = req.body;
-
-        // This is where we check for the key.
         const API_KEY = process.env.GEMINI_API_KEY;
 
-        // Let's see what the server thinks the key is.
-        console.log("Attempting to use API Key:", API_KEY ? `Key of length ${API_KEY.length}` : "Key is UNDEFINED"); // <-- DEBUGGING LINE 2
-
         if (!API_KEY) {
-            // This is the error you are getting.
-            console.error("Error: GEMINI_API_KEY is not defined in the environment."); // <-- DEBUGGING LINE 3
+            console.error("Server configuration error: API Key not found.");
             return res.status(500).json({ error: "Server configuration error: API Key not found." });
         }
         
@@ -48,19 +47,24 @@ app.post('/api/chat', async (req, res) => {
         res.json(googleApiResponse.data);
 
     } catch (error) {
-        console.error("Full error object:", error); // <-- DEBUGGING LINE 4
         const errorMessage = error.response ? error.response.data.error.message : "An internal server error occurred.";
+        console.error("Error in /api/chat:", errorMessage);
         res.status(500).json({ error: errorMessage });
     }
 });
 
+// Tell the main app to use our new router for all routes starting with /api
+app.use('/api', apiRouter);
+
+// --- Catch-all route for the frontend ---
+// This is important for single-page applications. It sends index.html for any
+// GET request that doesn't match an API route or a static file.
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+
 // Start the Server
 app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
-    console.log("Current working directory:", process.cwd());
-    if (process.env.GEMINI_API_KEY) {
-        console.log("SUCCESS: GEMINI_API_KEY was found on startup.");
-    } else {
-        console.log("FAILURE: GEMINI_API_KEY was NOT found on startup.");
-    }
+    console.log(`Server is running on port ${PORT}`);
 });
